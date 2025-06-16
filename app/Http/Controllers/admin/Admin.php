@@ -13,6 +13,7 @@ use App\Models\Orders;
 use App\Models\OrdersDetails;
 use App\Models\Pay;
 use App\Models\PayGroup;
+use App\Models\Table;
 use BaconQrCode\Encoder\QrCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -87,10 +88,11 @@ class Admin extends Controller
                 }
 
                 if ($rs->status != 3) {
-                    $pay = '<button data-id="' . $rs->table_id . '" data-total="' . $rs->total . '" type="button" class="btn btn-sm btn-outline-success modalPay">ชำระเงิน</button>';
+                    $pay = '<button data-id="' . $rs->table_id . '" data-total="' . $rs->total . '" type="button" class="btn btn-sm btn-outline-success modalPay m-1">ชำระเงิน</button>';
                 }
                 $flag_order = '<button class="btn btn-sm btn-success">สั่งหน้าร้าน</button>';
-                $action = '<button data-id="' . $rs->table_id . '" type="button" class="btn btn-sm btn-outline-primary modalShow m-1">รายละเอียด</button>' . $pay;
+                $action = '<button data-id="' . $rs->table_id . '" type="button" class="btn btn-sm btn-outline-primary modalShow m-1">รายละเอียด</button>
+                <a href="' . route('printOrderAdmin', $rs->table_id) . '" target="_blank" type="button" class="btn btn-sm btn-outline-primary m-1">บิลเก็บเงิน</a>' . $pay;
                 $info[] = [
                     'flag_order' => $flag_order,
                     'table_id' => $rs->table_id,
@@ -482,5 +484,34 @@ class Admin extends Controller
             }
         }
         return response()->json($data);
+    }
+
+    public function printOrderAdmin($id)
+    {
+        $config = Config::first();
+        $getOrder = Orders::where('table_id', $id)->whereIn('status', [1, 2])->get();
+        $order_id = array();
+        $qr = '';
+        $pay = 0;
+        if ($config->promptpay != '') {
+            $qr = Builder::staticMerchantPresentedQR($config->promptpay)->toSvgString();
+            $qr = str_replace('<svg', '<svg width="150" height="150"', $qr);
+            $qr = '<div style="width: 150px; height: 150px; overflow: hidden;">
+                        <div style="transform: scale(1.25); transform-origin: center;">
+                            ' . $qr . '
+                        </div>
+                    </div>';
+        } elseif ($config->image_qr != '') {
+            $qr = '<img width="150px" src="' . url('storage/' . $config->image_qr) . '">';
+        }
+        foreach ($getOrder as $rs) {
+            $order_id[] = $rs->id;
+            $pay = $pay + $rs->total;
+        }
+        $order = OrdersDetails::whereIn('order_id', $order_id)
+            ->with('menu', 'option')
+            ->get();
+        $table = Table::find($id);
+        return view('printOrder', compact('config', 'order', 'qr', 'table', 'pay'));
     }
 }

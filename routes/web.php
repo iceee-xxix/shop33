@@ -110,6 +110,8 @@ Route::middleware('checkLogin')->group(function () {
     Route::post('/admin/menu/menuOptionUpdate', [Menu::class, 'menuOptionUpdate'])->name('menuOptionUpdate');
     Route::get('/admin/menu/menuOptionEdit/{id}', [Menu::class, 'menuOptionEdit'])->name('menuOptionEdit');
     Route::post('/admin/menu/menuOptionEdit/delete', [Menu::class, 'menuOptionDelete'])->name('menuOptionDelete');
+    //
+    Route::get('/admin/order/printOrderAdmin/{id}', [Admin::class, 'printOrderAdmin'])->name('printOrderAdmin');
 });
 
 
